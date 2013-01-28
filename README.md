@@ -22,6 +22,15 @@ example server will also install itself as a console-script, so you can do
 and you will have the example server running on port 8080, serving the git repositories 
 in your working directory world-readable.
 
+Example password file 
+
+[users]
+USERNAME GOES HERE: SHA1_encrypted_password 
+
+[access]
+USERNAME GOES HERE: repository_abc=r,repository_def=rw
+
+
 Why not WSGI
 ------------
 

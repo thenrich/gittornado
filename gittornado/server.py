@@ -20,6 +20,7 @@
 import os.path
 import logging
 import ConfigParser
+import hashlib
 
 import tornado.ioloop, tornado.httpserver
 from tornado.options import define, options, parse_command_line
@@ -48,7 +49,7 @@ def auth(request):
     userpw_base64 = author.strip()[5:].strip()
     user, pw = userpw_base64.decode('base64').split(':', 1)
     if accessfile.has_option('users', user):
-        if accessfile.get('users', user) == pw:
+        if accessfile.get('users', user) == hashlib.new('SHA1', pw).hexdigest():
             if accessfile.has_option('access', user):
 		perms = permsToDict(accessfile.get('access', user))
 		return pathlets[0] in perms and 'r' in perms[pathlets[0]], pathlets[0] in perms and 'w' in perms[pathlets[0]]
