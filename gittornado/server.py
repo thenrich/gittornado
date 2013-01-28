@@ -27,26 +27,33 @@ from gittornado import RPCHandler, InfoRefsHandler, FileHandler
 
 accessfile = ConfigParser.ConfigParser()
 
+def permsToDict(str):
+    perms_dict = {}
+    perms = str.split(',')
+    for p in perms:
+        ps = p.split('=')
+        perms_dict[ps[0]] = ps[1]
+
+    return perms_dict
+
 def auth(request):
     pathlets = request.path.strip('/').split('/')
-
     author = request.headers.get('Authorization', None)
     if author is None:
-        return True, False
+        return False, False
 
     if author.strip().lower()[:5] != 'basic':
-        return True, False
+        return False, False
 
     userpw_base64 = author.strip()[5:].strip()
-
     user, pw = userpw_base64.decode('base64').split(':', 1)
-
     if accessfile.has_option('users', user):
         if accessfile.get('users', user) == pw:
             if accessfile.has_option('access', user):
-                return True, pathlets[0] in accessfile.get('access', user).split(',')
+		perms = permsToDict(accessfile.get('access', user))
+		return pathlets[0] in perms and 'r' in perms[pathlets[0]], pathlets[0] in perms and 'w' in perms[pathlets[0]]
 
-    return True, False
+    return False, False
 
 def gitlookup(request):
     pathlets = request.path.strip('/').split('/')
@@ -68,6 +75,8 @@ def main():
     define('gitbase', default='.', type=str, help="Base directory where bare git directories are stored")
     define('accessfile', type=str, help="File with access permissions")
     define('realm', default='my git repos', type=str, help="Basic auth realm")
+    define('certfile', default='', type=str, help="Location of SSL cert")
+    define('keyfile', default='', type=str, help="Location of SSL key")
 
     parse_command_line()
 
@@ -86,7 +95,11 @@ def main():
                            ('/.*/objects/.*', FileHandler, conf),
                            ])
 
-    server = tornado.httpserver.HTTPServer(app)
+    server = tornado.httpserver.HTTPServer(app, ssl_options={
+	    "certfile":options.certfile,
+	    "keyfile":options.keyfile
+        }
+    )
     server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
 

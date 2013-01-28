@@ -44,7 +44,7 @@ class BaseHandler(tornado.web.RequestHandler):
     gitlookup = None
     gitcommand = None
 
-    public_readble = True
+    public_readble = False 
     public_writable = False
 
     def initialize(self, **kwargs):
