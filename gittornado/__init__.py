@@ -141,6 +141,7 @@ class InfoRefsHandler(BaseHandler):
                 raise tornado.web.HTTPError(403, 'You are not allowed to perform this action')
 
         if not rpc:
+            print "NOT RPC"
             # this appears to be a dumb client. send the file
             logger.debug("Dumb client detected")
             FileWrapper(self.request, os.path.join(gitdir, 'info', 'refs'), dict(dont_cache() + [('Content-Type', 'text/plain; charset=utf-8')]))

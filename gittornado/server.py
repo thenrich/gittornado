@@ -21,6 +21,7 @@ import os.path
 import logging
 import ConfigParser
 import hashlib
+import ssl
 
 import tornado.ioloop, tornado.httpserver
 from tornado.options import define, options, parse_command_line
@@ -38,21 +39,26 @@ def permsToDict(str):
     return perms_dict
 
 def auth(request):
+    cert = request.get_ssl_certificate() 
+    print cert
+    print cert['notAfter']
+    ssl_dict = dict([[t[0][0], t[0][1]] for t in cert['subject']])
     pathlets = request.path.strip('/').split('/')
-    author = request.headers.get('Authorization', None)
-    if author is None:
-        return False, False
+   
+    #author = request.headers.get('Authorization', None)
+    #if author is None:
+    #    return False, False
 
-    if author.strip().lower()[:5] != 'basic':
-        return False, False
+    #if author.strip().lower()[:5] != 'basic':
+    #    return False, False
 
-    userpw_base64 = author.strip()[5:].strip()
-    user, pw = userpw_base64.decode('base64').split(':', 1)
-    if accessfile.has_option('users', user):
-        if accessfile.get('users', user) == hashlib.new('SHA1', pw).hexdigest():
-            if accessfile.has_option('access', user):
-		perms = permsToDict(accessfile.get('access', user))
-		return pathlets[0] in perms and 'r' in perms[pathlets[0]], pathlets[0] in perms and 'w' in perms[pathlets[0]]
+    #userpw_base64 = author.strip()[5:].strip()
+    #user, pw = userpw_base64.decode('base64').split(':', 1)
+    if accessfile.has_option('users', ssl_dict['emailAddress']):
+        #if accessfile.get('users', user) == hashlib.new('SHA1', pw).hexdigest():
+        if accessfile.has_option('access', ssl_dict['emailAddress']):
+            perms = permsToDict(accessfile.get('access', ssl_dict['emailAddress']))
+            return pathlets[0] in perms and 'r' in perms[pathlets[0]], pathlets[0] in perms and 'w' in perms[pathlets[0]]
 
     return False, False
 
@@ -78,6 +84,7 @@ def main():
     define('realm', default='my git repos', type=str, help="Basic auth realm")
     define('certfile', default='', type=str, help="Location of SSL cert")
     define('keyfile', default='', type=str, help="Location of SSL key")
+    define('cafile', default='', type=str, help="Location of CA PEM file")
 
     parse_command_line()
 
@@ -98,7 +105,10 @@ def main():
 
     server = tornado.httpserver.HTTPServer(app, ssl_options={
 	    "certfile":options.certfile,
-	    "keyfile":options.keyfile
+	    "keyfile":options.keyfile,
+            "cert_reqs":ssl.CERT_REQUIRED,
+	    "ca_certs":options.cafile,
+	    "ssl_version":ssl.PROTOCOL_SSLv3
         }
     )
     server.listen(options.port)
